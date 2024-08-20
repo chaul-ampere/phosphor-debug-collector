@@ -11,6 +11,7 @@
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/bus/match.hpp>
 #include <sdbusplus/server/object.hpp>
+#include <filesystem>
 #include <xyz/openbmc_project/Dump/Create/server.hpp>
 
 namespace phosphor
@@ -22,6 +23,7 @@ namespace faultlog
 
 using CreateIface = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::Dump::server::Create>;
+namespace fs = std::filesystem;
 
 /** @class Manager
  *  @brief FaultLog Dump manager implementation.
@@ -71,12 +73,7 @@ class Manager :
         diagnosticSize = 0;
     }
 
-    void restore() override
-    {
-        // TODO phosphor-debug-collector/issues/21: Restore fault log entries
-        // after service restart
-        lg2::info("dump_manager_faultlog restore not implemented");
-    }
+    void restore() override;
 
     /** @brief  Delete all fault log entries and their corresponding fault log
      * dump files */
@@ -168,6 +165,9 @@ class Manager :
     /** @brief Check threshold condition of FaultLog */
     void checkThresholdFaultLog(FaultDataType type,
                                 std::string &additionalTypeStr);
+
+    /** @brief Restore the counter of last entry, cper and crashdump */
+    void restoreCounter();
 };
 
 } // namespace faultlog
