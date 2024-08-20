@@ -173,6 +173,16 @@ option('MAX_TOTAL_CRASHDUMP_ENTRIES', type : 'integer',
         description : 'Maximum number of CrashDump entries'
       )
 
+option('MAX_TOTAL_BERT_ENTRIES', type : 'integer',
+        value : 2,
+        description : 'Maximum number of BERT entries'
+      )
+
+option('MAX_TOTAL_DIAGNOSTIC_ENTRIES', type : 'integer',
+        value : 8,
+        description : 'Maximum number of Diagnostic entries'
+      )
+
 option('MAX_NUM_SAVED_CRASHDUMP_ENTRIES', type : 'integer',
         value : 1,
         description : 'Maximum number of specially saved crashdump entries'

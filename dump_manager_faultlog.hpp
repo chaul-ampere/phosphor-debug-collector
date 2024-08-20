@@ -67,6 +67,8 @@ class Manager :
         faultLogSize = 0;
         cperLogSize = 0;
         crashdumpSize = 0;
+        bertSize = 0;
+        diagnosticSize = 0;
     }
 
     void restore() override
@@ -103,6 +105,8 @@ class Manager :
     uint32_t faultLogSize;
     uint32_t cperLogSize;
     uint32_t crashdumpSize;
+    uint32_t bertSize;
+    uint32_t diagnosticSize;
 
     /** @brief Path to the dump file*/
     std::string dumpDir;
