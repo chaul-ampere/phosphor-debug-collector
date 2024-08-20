@@ -225,6 +225,16 @@ conf_data.set(
     get_option('MAX_TOTAL_CRASHDUMP_ENTRIES'),
     description : 'Maximum number of CrashDump entries'
 )
+conf_data.set(
+    'MAX_TOTAL_BERT_ENTRIES',
+    get_option('MAX_TOTAL_BERT_ENTRIES'),
+    description : 'Maximum number of BERT entries '
+)
+conf_data.set(
+    'MAX_TOTAL_DIAGNOSTIC_ENTRIES',
+    get_option('MAX_TOTAL_DIAGNOSTIC_ENTRIES'),
+    description : 'Maximum number of Diagnostic entries'
+)
 
 if cpp.has_header('poll.h')
     add_project_arguments('-DPLDM_HAS_POLL=1', language: 'cpp')

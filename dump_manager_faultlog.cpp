@@ -60,6 +60,13 @@ sdbusplus::message::object_path Manager::createDump(
     std::string primaryLogIdStr;
     std::string additionalTypeStr;
 
+    if (MAX_TOTAL_CRASHDUMP_ENTRIES != (MAX_TOTAL_BERT_ENTRIES +
+                                        MAX_TOTAL_DIAGNOSTIC_ENTRIES))
+    {
+        lg2::error("Incorrect total of BERT and Diagnostic "
+                   "entries with total CrashDump entries\n");
+        elog<InternalFailure>();
+    }
     getAndCheckCreateDumpParams(params, entryType, primaryLogIdStr,
                                 additionalTypeStr);
     checkThresholdFaultLog(entryType, additionalTypeStr);
@@ -143,6 +150,8 @@ void Manager::deleteAll()
     faultLogSize = 0;
     cperLogSize = 0;
     crashdumpSize = 0;
+    bertSize = 0;
+    diagnosticSize = 0;
 
     removeAllDataEntry();
 
@@ -365,6 +374,16 @@ void Manager::getAndCheckCreateDumpParams(
         {
             entryType = FaultDataType::CPER;
         }
+        else if (value == "BERT")
+        {
+            entryType = FaultDataType::Crashdump;
+            additionalTypeName = "BERT";
+        }
+        else if (value == "Diagnostic")
+        {
+            entryType = FaultDataType::Crashdump;
+            additionalTypeName = "Diagnostic";
+        }
         else
         {
             lg2::error("Unexpected entry type, not handled");
@@ -518,6 +537,20 @@ void Manager::checkThresholdFaultLog(FaultDataType entryType,
         else
         {
             /* OEM */
+            if (additionalTypeStr == "BERT")
+            {
+                if (bertSize == MAX_TOTAL_BERT_ENTRIES)
+                    removeEarliestDataEntry(entryType);
+                else
+                    bertSize++;
+            }
+            if (additionalTypeStr == "Diagnostic")
+            {
+                if (diagnosticSize == MAX_TOTAL_DIAGNOSTIC_ENTRIES)
+                    removeEarliestDataEntry(entryType);
+                else
+                    diagnosticSize++;
+            }
         }
     }
     else
@@ -585,6 +618,10 @@ void Manager::removeEarliestEntry(std::string &additionalTypeStr)
             else
             {
                 /* OEM */
+                if (additionalTypeStr == "BERT")
+                    bertSize--;
+                if (additionalTypeStr == "Diagnostic")
+                    diagnosticSize--;
             }
             break;
         default:
