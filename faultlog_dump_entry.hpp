@@ -62,7 +62,8 @@ class Entry : virtual public EntryIfaces, virtual public phosphor::dump::Entry
         const std::filesystem::path& file,
         phosphor::dump::OperationStatus status, std::string originatorId,
         originatorTypes originatorType, FaultDataType entryType,
-        const std::string& primaryLogIdStr, phosphor::dump::Manager& parent,
+        const std::string& primaryLogIdStr, const std::string& additionalTypeStr,
+        phosphor::dump::Manager& parent,
         std::map<uint32_t, std::unique_ptr<phosphor::dump::Entry>>* parentMap) :
         EntryIfaces(bus, objPath.c_str(), EntryIfaces::action::defer_emit),
         phosphor::dump::Entry(bus, objPath.c_str(), dumpId, timeStamp, fileSize,
@@ -72,6 +73,7 @@ class Entry : virtual public EntryIfaces, virtual public phosphor::dump::Entry
     {
         type(entryType);
         primaryLogId(primaryLogIdStr);
+        additionalTypeName(additionalTypeStr);
     }
 
     /** @brief Delete this d-bus object.

@@ -58,18 +58,11 @@ sdbusplus::message::object_path Manager::createDump(
 
     FaultDataType entryType = FaultDataType::Crashdump;
     std::string primaryLogIdStr;
+    std::string additionalTypeStr;
 
-    getAndCheckCreateDumpParams(params, entryType, primaryLogIdStr);
-
-    // To stay within the limit of MAX_NUM_FAULT_LOG_ENTRIES we need to remove
-    // an entry from the fault log map to make room for creating a new entry
-    if (entries.size() == MAX_NUM_FAULT_LOG_ENTRIES)
-    {
-        // Save the earliest fault log entry to a saved entries map (if
-        // it qualifies to be saved), and remove it from the main fault
-        // log entries map.
-        saveEarliestEntry();
-    }
+    getAndCheckCreateDumpParams(params, entryType, primaryLogIdStr,
+                                additionalTypeStr);
+    checkThresholdFaultLog(entryType, additionalTypeStr);
 
     // Get the originator id and type from params
     std::string originatorId;
@@ -126,7 +119,7 @@ sdbusplus::message::object_path Manager::createDump(
                 std::filesystem::file_size(faultLogFilePath), faultLogFilePath,
                 phosphor::dump::OperationStatus::Completed,
                 originatorId, originatorType, entryType,
-                primaryLogIdStr, *this, &entries)));
+                primaryLogIdStr, additionalTypeStr, *this, &entries)));
     }
     catch (const std::invalid_argument& e)
     {
@@ -145,6 +138,13 @@ sdbusplus::message::object_path Manager::createDump(
 void Manager::deleteAll()
 {
     lg2::info("In dump_manager_faultlog.hpp deleteAll");
+
+    lastEntryId = 0;
+    faultLogSize = 0;
+    cperLogSize = 0;
+    crashdumpSize = 0;
+
+    removeAllDataEntry();
 
     phosphor::dump::Manager::deleteAll();
 
@@ -328,7 +328,7 @@ void Manager::registerCperLogMatch()
 
 void Manager::getAndCheckCreateDumpParams(
     const phosphor::dump::DumpCreateParams& params, FaultDataType& entryType,
-    std::string& primaryLogIdStr)
+    std::string& primaryLogIdStr, std::string& additionalTypeName)
 {
     using InvalidArgument =
         sdbusplus::xyz::openbmc_project::Common::Error::InvalidArgument;
@@ -485,6 +485,116 @@ void Manager::saveEarliestEntry()
 
     // Erase from fault log entries map
     entries.erase(earliestEntryId);
+}
+
+void Manager::checkThresholdFaultLog(FaultDataType entryType,
+                                     std::string &additionalTypeStr)
+{
+    if (faultLogSize == MAX_TOTAL_FAULT_LOG_ENTRIES)
+    {
+        removeEarliestEntry(additionalTypeStr);
+    }
+    else
+    {
+        faultLogSize++;
+    }
+
+    if (entryType == FaultDataType::CPER)
+    {
+        if (cperLogSize == MAX_TOTAL_CPER_LOG_ENTRIES)
+            removeEarliestDataEntry(entryType);
+        else
+            cperLogSize++;
+    }
+    else if (entryType == FaultDataType::Crashdump)
+    {
+        if (additionalTypeStr.empty())
+        {
+            if (crashdumpSize == MAX_TOTAL_CRASHDUMP_ENTRIES)
+                removeEarliestDataEntry(entryType);
+            else
+                crashdumpSize++;
+        }
+        else
+        {
+            /* OEM */
+        }
+    }
+    else
+    {
+        lg2::error("Incorrect entry type");
+        elog<InternalFailure>();
+    }
+}
+
+void Manager::removeAllDataEntry()
+{
+    for ( auto it = entries.begin(); it != entries.end(); ++it  )
+    {
+        auto secondPtr = it->second.get();
+        std::string faultLogFilePath =
+                dynamic_cast<faultlog::Entry*>(secondPtr)->primaryLogId();
+        // Remove fault log file
+        if (std::filesystem::exists(faultLogFilePath.c_str()))
+        {
+            std::filesystem::remove(faultLogFilePath.c_str());
+        }
+    }
+}
+
+void Manager::removeEarliestDataEntry(FaultDataType type)
+{
+    for ( auto it = entries.begin(); it != entries.end(); ++it  )
+    {
+        auto secondPtr = it->second.get();
+        FaultDataType entryType =
+                dynamic_cast<faultlog::Entry*>(secondPtr)->type();
+        std::string faultLogFilePath =
+                dynamic_cast<faultlog::Entry*>(secondPtr)->primaryLogId();
+        if (entryType == type)
+        {
+            // Remove fault log file
+            if (std::filesystem::exists(faultLogFilePath.c_str()))
+            {
+                std::filesystem::remove(faultLogFilePath.c_str());
+                break;
+            }
+        }
+    }
+}
+
+void Manager::removeEarliestEntry(std::string &additionalTypeStr)
+{
+    auto it = entries.begin();
+    auto secondPtr = it->second.get();
+    FaultDataType entryType =
+            dynamic_cast<faultlog::Entry*>(secondPtr)->type();
+    std::string faultLogFilePath =
+            dynamic_cast<faultlog::Entry*>(secondPtr)->primaryLogId();
+
+    if (std::filesystem::exists(faultLogFilePath.c_str()))
+    {
+        std::filesystem::remove(faultLogFilePath.c_str());
+        switch (entryType) {
+        case FaultDataType::CPER:
+            cperLogSize--;
+            break;
+        case FaultDataType::Crashdump:
+            if (additionalTypeStr.empty())
+                crashdumpSize--;
+            else
+            {
+                /* OEM */
+            }
+            break;
+        default:
+            lg2::error("Incorrect FaultLog Entry Type");
+            elog<InternalFailure>();
+            break;
+        }
+    }
+
+    entries.erase(it);
 }
 
 } // namespace faultlog
