@@ -87,46 +87,30 @@ sdbusplus::message::object_path Manager::createDump(
         "next entry id: {ID}, entries.size(): {SIZE}",
         "ID", id, "SIZE", entries.size());
 
-    std::filesystem::path faultLogFilePath(
-        std::string(FAULTLOG_DUMP_PATH) + idString);
-    std::ofstream faultLogFile;
-
-    errno = 0;
-
-    faultLogFile.open(faultLogFilePath,
-                      std::ofstream::out | std::fstream::trunc);
-
-    if (faultLogFile.is_open())
+    std::filesystem::path faultLogFilePath = primaryLogIdStr;
+    uint64_t fileSize = 0;
+    if (std::filesystem::exists(faultLogFilePath))
     {
-        lg2::info("faultLogFile is open");
-
-        faultLogFile << "This is faultlog file #" << idString << " at "
-                     << std::string(FAULTLOG_DUMP_PATH) + idString << std::endl;
-
-        faultLogFile.close();
+        fileSize = std::filesystem::file_size(faultLogFilePath);
     }
-    else
+    lg2::info("file_size: {SIZE}", "SIZE", fileSize);
+    std::filesystem::path filePath = dumpDir + idString;
+    if (!std::filesystem::exists(filePath))
     {
-        lg2::error(
-            "Failed to open fault log file at {FILE_PATH}, errno: {ERRNO}, "
-            "strerror: {STRERROR}, OBJECTPATH: {OBJECT_PATH}, ID: {ID}",
-            "FILE_PATH", faultLogFilePath, "ERRNO", errno, "STRERROR",
-            strerror(errno), "OBJECT_PATH", objPath, "ID", id);
-        elog<Open>(ErrnoOpen(errno), PathOpen(objPath.c_str()));
+        std::filesystem::create_directory(filePath);
     }
-
+    filePath /= FAULTLOG_FILE;
     try
     {
         lg2::info("dump_manager_faultlog.cpp: add faultlog entry");
-
-        entries.insert(std::make_pair(
-            id,
-            std::make_unique<faultlog::Entry>(
-                bus, objPath.c_str(), id, generateTimestamp(),
-                std::filesystem::file_size(faultLogFilePath), faultLogFilePath,
-                phosphor::dump::OperationStatus::Completed,
-                originatorId, originatorType, entryType,
-                primaryLogIdStr, additionalTypeStr, *this, &entries)));
+        auto e = std::make_unique<faultlog::Entry>(
+                      bus, objPath.c_str(), id, generateTimestamp(),
+                      fileSize, filePath,
+                      phosphor::dump::OperationStatus::Completed,
+                      originatorId, originatorType, entryType,
+                      primaryLogIdStr, additionalTypeStr, *this, &entries);
+        e->serializeEntry();
+        entries.insert(std::make_pair(id, std::move(e)));
     }
     catch (const std::invalid_argument& e)
     {
@@ -154,6 +138,15 @@ void Manager::deleteAll()
     diagnosticSize = 0;
 
     removeAllDataEntry();
+
+    // Delete the persistent representation of all FaultLog entries.
+    for ( auto it = entries.begin(); it != entries.end(); ++it  )
+    {
+        fs::path faultlogPath(FAULTLOG_DUMP_PATH);
+        uint32_t id = it->first;
+        faultlogPath /= std::to_string(id);
+        fs::remove_all(faultlogPath);
+    }
 
     phosphor::dump::Manager::deleteAll();
 
@@ -631,8 +624,120 @@ void Manager::removeEarliestEntry(std::string &additionalTypeStr)
         }
     }
 
+    /* Delete the persistent representation of this FaultLog entry */
+    fs::path faultlogPath(FAULTLOG_DUMP_PATH);
+    uint32_t id = it->first;
+    faultlogPath /= std::to_string(id);
+    fs::remove_all(faultlogPath);
+
+    /* Delete the FaultLog entry */
     entries.erase(it);
 }
+
+void Manager::restore()
+{
+    lg2::info("dump_manager_faultlog restore is called");
+    fs::path dir(FAULTLOG_DUMP_PATH);
+    if (!fs::exists(dir) || fs::is_empty(dir))
+    {
+        return;
+    }
+
+    for (auto& file : fs::directory_iterator(dir))
+    {
+        auto id = file.path().filename().c_str();
+        auto idNum = std::stol(id);
+        auto idString = std::to_string(idNum);
+        auto objPath = std::filesystem::path(baseEntryPath) / idString;
+        std::filesystem::path filePath = file.path();
+        FaultDataType entryType;
+        std::string primaryLogIdStr;
+        std::string additionalTypeStr;
+        std::string originatorId;
+        originatorTypes originatorType;
+
+        filePath /= FAULTLOG_FILE;
+        auto e = std::make_unique<faultlog::Entry>(
+                      bus, objPath.c_str(), idNum, generateTimestamp(),
+                      0, filePath,
+                      phosphor::dump::OperationStatus::Completed,
+                      originatorId, originatorType, entryType,
+                      primaryLogIdStr, additionalTypeStr, *this, &entries);
+
+        e->deserializeEntry();
+        e->serializeEntry();
+        entries.insert(std::make_pair(idNum, std::move(e)));
+    }
+
+    if (!entries.empty())
+    {
+        // Restore the counter of last entry, cper and crashdump
+        restoreCounter();
+    }
+}
+
+void Manager::restoreCounter()
+{
+    lastEntryId = entries.rbegin()->first;
+
+    for ( auto it = entries.begin(); it != entries.end(); ++it  )
+    {
+        faultLogSize++;
+        if (faultLogSize > MAX_TOTAL_FAULT_LOG_ENTRIES)
+        {
+            faultLogSize = MAX_TOTAL_FAULT_LOG_ENTRIES;
+        }
+        auto secondPtr = it->second.get();
+        FaultDataType entryType =
+                dynamic_cast<faultlog::Entry*>(secondPtr)->type();
+        std::string primaryLogId =
+                dynamic_cast<faultlog::Entry*>(secondPtr)->primaryLogId();
+        std::string additionalTypeStr =
+                dynamic_cast<faultlog::Entry*>(secondPtr)->additionalTypeName();
+        // Remove fault log file
+        switch (entryType) {
+        case FaultDataType::CPER:
+            cperLogSize++;
+            if (cperLogSize > MAX_TOTAL_CPER_LOG_ENTRIES)
+            {
+                cperLogSize = MAX_TOTAL_CPER_LOG_ENTRIES;
+            }
+            break;
+        case FaultDataType::Crashdump:
+            crashdumpSize++;
+            if (crashdumpSize > MAX_TOTAL_CRASHDUMP_ENTRIES)
+            {
+                crashdumpSize = MAX_TOTAL_CRASHDUMP_ENTRIES;
+            }
+            if (!additionalTypeStr.empty())
+            {
+                /* OEM */
+                if (additionalTypeStr == "BERT")
+                {
+                    bertSize++;
+                    if (bertSize > MAX_TOTAL_BERT_ENTRIES)
+                    {
+                        bertSize = MAX_TOTAL_BERT_ENTRIES;
+                    }
+                }
+                if (additionalTypeStr == "Diagnostic")
+                {
+                    diagnosticSize++;
+                    if (diagnosticSize > MAX_TOTAL_DIAGNOSTIC_ENTRIES)
+                    {
+                        diagnosticSize = MAX_TOTAL_DIAGNOSTIC_ENTRIES;
+                    }
+                }
+            }
+            break;
+        default:
+            lg2::error("Incorrect FaultLog Entry Type");
+            elog<InternalFailure>();
+            break;
+        }
+    }
+}
+
 
 } // namespace faultlog
 } // namespace dump

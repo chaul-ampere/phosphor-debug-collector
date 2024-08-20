@@ -91,6 +91,7 @@ void Entry::serialize()
         j["originatorId"] = originatorId();
         j["originatorType"] = originatorType();
         j["startTime"] = startTime();
+        j["elapsed"] = elapsed();
 
         os << j.dump();
     }
@@ -143,6 +144,7 @@ void Entry::deserialize(const std::filesystem::path& dumpPath)
                 originatorId(j["originatorId"].get<std::string>());
                 originatorType(j["originatorType"].get<originatorTypes>());
                 startTime(j["startTime"].get<uint64_t>());
+                elapsed(j["elapsed"].get<uint64_t>());
             }
             else
             {

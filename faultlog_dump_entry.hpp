@@ -27,6 +27,11 @@ using EntryIfaces = sdbusplus::server::object_t<
 using FaultDataType = sdbusplus::xyz::openbmc_project::Common::server::
     FaultLogType::FaultLogTypes;
 
+// Dummy file store the contents
+constexpr auto FAULTLOG_FILE = "dummy_file";
+
+// Serialize file store the contents of faultlog entry
+constexpr auto FAULTLOG_SERIALIZE_FILE = "faultlog_serialized_entry.json";
 
 /** @class Entry
  *  @brief OpenBMC Fault Log Dump Entry implementation.
@@ -80,10 +85,30 @@ class Entry : virtual public EntryIfaces, virtual public phosphor::dump::Entry
      */
     void delete_() override;
 
+    /** @brief Serialize the faultlog and base dump entry attributes
+     *  @return
+     */
+    void serializeEntry();
+
+    /** @brief Deserialize the faultlog and base dump entry attributes
+     *  @return
+     */
+    void deserializeEntry();
+
   private:
     /** @brief Fault log map containing this entry (e.g. the main fault log map
      * or a saved entries map) */
     std::map<uint32_t, std::unique_ptr<phosphor::dump::Entry>>* parentMap;
+
+    /** @brief Serialize the faultlog entry attributes
+     *  @return
+     */
+    void serializeFaultLogEntry();
+
+    /** @brief Deserialize the faultlog entry attributes
+     *  @return
+     */
+    void derializeFaultLogEntry();
 };
 
 } // namespace faultlog
