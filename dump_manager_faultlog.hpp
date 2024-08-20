@@ -64,6 +64,9 @@ class Manager :
         }
 
         registerFaultLogMatches();
+        faultLogSize = 0;
+        cperLogSize = 0;
+        crashdumpSize = 0;
     }
 
     void restore() override
@@ -87,8 +90,7 @@ class Manager :
 
   private:
     static constexpr uint32_t MAX_NUM_FAULT_LOG_ENTRIES =
-        MAX_TOTAL_FAULT_LOG_ENTRIES - MAX_NUM_SAVED_CRASHDUMP_ENTRIES -
-        MAX_NUM_SAVED_CPER_LOG_ENTRIES;
+            MAX_TOTAL_CPER_LOG_ENTRIES + MAX_TOTAL_CRASHDUMP_ENTRIES;
 
     /** @brief Map of saved CPER log entry dbus objects based on entry id */
     std::map<uint32_t, std::unique_ptr<phosphor::dump::Entry>>
@@ -97,6 +99,10 @@ class Manager :
     /** @brief Map of saved crashdump entry dbus objects based on entry id */
     std::map<uint32_t, std::unique_ptr<phosphor::dump::Entry>>
         savedCrashdumpEntries;
+
+    uint32_t faultLogSize;
+    uint32_t cperLogSize;
+    uint32_t crashdumpSize;
 
     /** @brief Path to the dump file*/
     std::string dumpDir;
@@ -120,10 +126,12 @@ class Manager :
      *  @param[out] entryType - Log entry type (corresponding to type of data in
      * primary fault data log)
      *  @param[out] primaryLogIdStr - Id of primary fault data log
+     *  @param[out] additionalTypeName - OEM format of a entryType
      */
     void getAndCheckCreateDumpParams(
         const phosphor::dump::DumpCreateParams& params,
-        FaultDataType& entryType, std::string& primaryLogIdStr);
+        FaultDataType& entryType, std::string& primaryLogIdStr,
+        std::string& additionalTypeName);
 
     /** @brief Generate the current timestamp, adjusting as needed to ensure an
      * increase compared to the last fault log entry's timestamp
@@ -143,6 +151,19 @@ class Manager :
      *  then it's simply deleted from the main fault log entries map.
      */
     void saveEarliestEntry();
+
+    /** @brief Remove all FaultLog data */
+    void removeAllDataEntry();
+
+    /** @brief Remove earliest FaultLog data match with FaultLog type */
+    void removeEarliestDataEntry(FaultDataType type);
+
+    /** @brief Remove earliest FaultLog data and entry */
+    void removeEarliestEntry(std::string &additionalTypeStr);
+
+    /** @brief Check threshold condition of FaultLog */
+    void checkThresholdFaultLog(FaultDataType type,
+                                std::string &additionalTypeStr);
 };
 
 } // namespace faultlog

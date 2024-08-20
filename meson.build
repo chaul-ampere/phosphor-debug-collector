@@ -210,6 +210,21 @@ conf_data.set(
     get_option('MAX_NUM_SAVED_CPER_LOG_ENTRIES'),
     description : 'Maximum number of specially saved CPER log entries'
 )
+conf_data.set_quoted(
+    'CRASHDUMP_LOG_PATH',
+    get_option('CRASHDUMP_LOG_PATH'),
+    description : 'File system path containing CrashDump logs'
+)
+conf_data.set(
+    'MAX_TOTAL_CPER_LOG_ENTRIES',
+    get_option('MAX_TOTAL_CPER_LOG_ENTRIES'),
+    description : 'Maximum number of CPER entries'
+)
+conf_data.set(
+    'MAX_TOTAL_CRASHDUMP_ENTRIES',
+    get_option('MAX_TOTAL_CRASHDUMP_ENTRIES'),
+    description : 'Maximum number of CrashDump entries'
+)
 
 if cpp.has_header('poll.h')
     add_project_arguments('-DPLDM_HAS_POLL=1', language: 'cpp')

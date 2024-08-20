@@ -144,7 +144,12 @@ option(
 )
 
 option('CPER_LOG_PATH', type : 'string',
-        value : '/run/bmcweb/redfish/v1/Systems/system/LogServices/',
+        value : '/var/lib/faultlogs/cper/',
+        description : 'File system path containing CPER logs'
+      )
+
+option('CRASHDUMP_LOG_PATH', type : 'string',
+        value : '/var/lib/faultlogs/crashdump/',
         description : 'File system path containing CPER logs'
       )
 
@@ -156,6 +161,16 @@ option('CPER_LOG_ID_STRING_LEN', type : 'integer',
 option('MAX_TOTAL_FAULT_LOG_ENTRIES', type : 'integer',
         value : 1000,
         description : 'Maximum number of fault log entries including those specially saved'
+      )
+
+option('MAX_TOTAL_CPER_LOG_ENTRIES', type : 'integer',
+        value : 100,
+        description : 'Maximum number of CPER entries'
+      )
+
+option('MAX_TOTAL_CRASHDUMP_ENTRIES', type : 'integer',
+        value : 10,
+        description : 'Maximum number of CrashDump entries'
       )
 
 option('MAX_NUM_SAVED_CRASHDUMP_ENTRIES', type : 'integer',
