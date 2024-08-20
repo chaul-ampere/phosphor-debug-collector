@@ -63,7 +63,7 @@ sdbusplus::message::object_path Manager::createDump(
     std::string path = extractParameter<std::string>(
         convertCreateParametersToString(CreateParameters::FilePath), params);
 
-    if ((Manager::fUserDumpInProgress == true) && (dumpType == DumpTypes::USER))
+    if (Manager::fUserDumpInProgress == true)
     {
         lg2::info("Another user initiated dump in progress");
         elog<sdbusplus::xyz::openbmc_project::Common::Error::Unavailable>();
@@ -99,10 +99,8 @@ sdbusplus::message::object_path Manager::createDump(
         elog<InternalFailure>();
     }
 
-    if (dumpType == DumpTypes::USER)
-    {
-        Manager::fUserDumpInProgress = true;
-    }
+    Manager::fUserDumpInProgress = true;
+
     return objPath.string();
 }
 
@@ -134,11 +132,8 @@ uint32_t Manager::captureDump(DumpTypes type, const std::string& path)
     else if (pid > 0)
     {
         Child::Callback callback = [this, type, pid](Child&, const siginfo_t*) {
-            if (type == DumpTypes::USER)
-            {
-                lg2::info("User initiated dump completed, resetting flag");
-                Manager::fUserDumpInProgress = false;
-            }
+            lg2::info("User initiated dump completed, resetting flag");
+            Manager::fUserDumpInProgress = false;
             this->childPtrMap.erase(pid);
         };
         try
