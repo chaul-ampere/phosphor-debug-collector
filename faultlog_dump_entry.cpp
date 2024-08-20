@@ -25,7 +25,7 @@ void Entry::delete_()
     }
 
     // Remove Dump entry D-bus object
-    phosphor::dump::Entry::delete_();
+    parentMap->erase(id);
 }
 
 } // namespace faultlog
