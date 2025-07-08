@@ -1,0 +1,6 @@
+[Unit]
+Description= System Dump Handling Service
+
+[Service]
+ExecStart=echo "System Dump Handling Service %I"
+Type=oneshot
