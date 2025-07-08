@@ -114,6 +114,14 @@ option(
 )
 
 option(
+    'system-dumps-extension',
+    type: 'feature',
+    value : 'disabled',
+    description : 'Enable system dumps'
+)
+
+
+option(
     'dump_rotate_config',
     type: 'feature',
     value: 'disabled',
@@ -209,6 +217,13 @@ option(
     type: 'string',
     value: '/xyz/openbmc_project/dump/system/entry',
     description: 'The system dump entry D-Bus object path',
+)
+
+option(
+    'SYSTEM_DUMP_PATH',
+    type : 'string',
+    value : '/var/lib/phosphor-debug-collector/system-dumps/',
+    description : 'Directory where system dumps are placed'
 )
 
 # Resource dump options

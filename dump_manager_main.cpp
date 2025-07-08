@@ -93,6 +93,7 @@ int main()
         // Daemon is all set up so claim the busname now.
         bus.request_name(DUMP_BUSNAME);
 
+        lg2::error("Chau: Running event loop");
         auto rc = sd_event_loop(eventP.get());
         if (rc < 0)
         {

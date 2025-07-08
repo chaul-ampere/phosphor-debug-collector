@@ -38,6 +38,8 @@ sdbusplus::message::unix_fd Entry::getFileHandle()
         elog<sdbusplus::xyz::openbmc_project::Common::Error::Unavailable>();
     }
 
+    lg2::info("Getting file handle: {FILE}", "FILE", file.generic_string());
+
     if (fdCloseEventSource)
     {
         // Return the existing file descriptor
