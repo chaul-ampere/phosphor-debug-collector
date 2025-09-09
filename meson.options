@@ -114,14 +114,6 @@ option(
 )
 
 option(
-    'system-dumps-extension',
-    type: 'feature',
-    value : 'disabled',
-    description : 'Enable system dumps'
-)
-
-
-option(
     'dump_rotate_config',
     type: 'feature',
     value: 'disabled',
@@ -224,6 +216,20 @@ option(
     type : 'string',
     value : '/var/lib/phosphor-debug-collector/system-dumps/',
     description : 'Directory where system dumps are placed'
+)
+
+option(
+    'pldm-file-transfer',
+    type : 'feature',
+    value : 'enabled',
+    description : 'Use PLDM File Transfer to collect and offload system dump'
+)
+
+option(
+    'ampere-dump-collectors',
+    type : 'feature',
+    value : 'enabled',
+    description : 'Use PLDM File Transfer to collect and offload system dump'
 )
 
 # Resource dump options

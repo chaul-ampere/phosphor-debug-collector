@@ -4,6 +4,7 @@
 #include "dump_manager.hpp"
 #include "dump_manager_bmc.hpp"
 #include "dump_manager_faultlog.hpp"
+#include "dump_manager_system.hpp"
 #include "elog_watch.hpp"
 #include "watch.hpp"
 #include "xyz/openbmc_project/Common/error.hpp"
@@ -77,6 +78,12 @@ int main()
                 bus, FAULTLOG_DUMP_OBJPATH, FAULTLOG_DUMP_OBJ_ENTRY,
                 FAULTLOG_DUMP_PATH);
         dumpMgrList.push_back(std::move(faultLogMgr));
+
+        std::unique_ptr<phosphor::dump::system::Manager> systemDumpMgr =
+            std::make_unique<phosphor::dump::system::Manager>(
+                bus, SYSTEM_DUMP_OBJPATH, SYSTEM_DUMP_OBJ_ENTRY,
+                SYSTEM_DUMP_PATH);
+        dumpMgrList.push_back(std::move(systemDumpMgr));
 
         phosphor::dump::loadExtensions(bus, dumpMgrList);
 

@@ -5,9 +5,9 @@
 #include "xyz/openbmc_project/Dump/NewDump/server.hpp"
 
 #include <sdbusplus/bus.hpp>
-#include <sdbusplus/server/object.hpp>
-#include <sdbusplus/slot.hpp>
 #include <xyz/openbmc_project/Dump/Create/server.hpp>
+
+#include <memory>
 
 namespace phosphor
 {
@@ -68,10 +68,10 @@ class Manager :
      */
     sdbusplus::message::object_path
         createDump(phosphor::dump::DumpCreateParams params) override;
-
-  private:
+    
     /** @brief Path to the dump file*/
     std::string dumpDir;
+  private:
     sdbusplus::slot_t _slot = sdbusplus::slot_t(nullptr);
 };
 

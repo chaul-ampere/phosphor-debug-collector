@@ -176,6 +176,24 @@ conf_data.set_quoted(
 )
 
 conf_data.set_quoted(
+    'SYSTEM_DUMP_PATH',
+    get_option('SYSTEM_DUMP_PATH'),
+    description : 'The system dump file path'
+)
+
+conf_data.set(
+    'PLDM_FILE_TRANSFER',
+    get_option('pldm-file-transfer').allowed(),
+    description : 'User PLDM File Transfer for system dump'
+)
+
+conf_data.set(
+    'AMPERE_DUMP_COLLECTORS',
+    get_option('ampere-dump-collectors').allowed(),
+    description : 'User PLDM File Transfer for system dump'
+)
+
+conf_data.set_quoted(
     'RESOURCE_DUMP_OBJPATH',
     get_option('RESOURCE_DUMP_OBJPATH'),
     description: 'The resource dump manager D-Bus path',
@@ -339,6 +357,8 @@ phosphor_dump_manager_sources = [
     'dump_offload.cpp',
     'dump_manager_faultlog.cpp',
     'faultlog_dump_entry.cpp',
+    'dump_manager_system.cpp',
+    'system_dump_entry.cpp',
 ]
 
 phosphor_dump_manager_dependency = [
@@ -349,6 +369,11 @@ phosphor_dump_manager_dependency = [
     cereal_dep,
     nlohmann_json_dep,
 ]
+
+if get_option('pldm-file-transfer').allowed()
+    minizip_dep = dependency('minizip')
+    phosphor_dump_manager_dependency += minizip_dep
+endif
 
 phosphor_dump_manager_install = true
 
@@ -363,6 +388,8 @@ subdir('host-transport-extensions')
 subdir('dump-extensions')
 
 subdir('service_files')
+
+subdir('dump-collectors')
 
 phosphor_dump_monitor_sources = [
     dump_types_hpp,

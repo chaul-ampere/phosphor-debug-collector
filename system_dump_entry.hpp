@@ -3,9 +3,6 @@
 #include "dump_entry.hpp"
 #include "xyz/openbmc_project/Dump/Entry/System/server.hpp"
 
-#include <sdbusplus/bus.hpp>
-#include <sdbusplus/server/object.hpp>
-#include <sdeventplus/source/io.hpp>
 #include <memory>
 
 namespace phosphor
@@ -16,9 +13,6 @@ namespace system
 {
 
 constexpr uint32_t INVALID_SOURCE_ID = 0xFFFFFFFF;
-
-template <typename T>
-using ServerObject = typename sdbusplus::server::object_t<T>;
 
 using EntryIfaces = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::Dump::Entry::server::System>;
@@ -43,9 +37,7 @@ class Entry : virtual public phosphor::dump::Entry, virtual public EntryIfaces
     Entry& operator=(const Entry&) = delete;
     Entry(Entry&&) = delete;
     Entry& operator=(Entry&&) = delete;
-    ~Entry(){
-        esource.reset();
-    };
+    ~Entry() = default;
 
     /** @brief Constructor for the Dump Entry Object
      *  @param[in] bus - Bus to attach to.
@@ -67,12 +59,10 @@ class Entry : virtual public phosphor::dump::Entry, virtual public EntryIfaces
           std::string originatorId, originatorTypes originatorType,
           phosphor::dump::Manager& parent) :
         phosphor::dump::Entry(bus, objPath.c_str(), dumpId, timeStamp, dumpSize,
-                              file, status, originatorId, originatorType,
-                              parent),
+                              file, status, originatorId, originatorType, parent),
         EntryIfaces(bus, objPath.c_str(), EntryIfaces::action::defer_emit)
     {
         sourceDumpId(sourceId);
-        // oemDiagnosticDataType(oemDiagType);
         // Emit deferred signal.
         this->phosphor::dump::system::EntryIfaces::emit_object_added();
     };
@@ -82,34 +72,33 @@ class Entry : virtual public phosphor::dump::Entry, virtual public EntryIfaces
      */
     void initiateOffload(std::string uri) override;
 
+    /**
+     * @brief Delete host system dump and it entry dbus object
+     */
+    void delete_() override;
+
     /** @brief Method to update an existing dump entry
      *  @param[in] timeStamp - Dump creation timestamp
      *  @param[in] dumpSize - Dump size in bytes.
      *  @param[in] sourceId - DumpId provided by the source.
      */
-    void update(const uint64_t& timeStamp, const uint64_t& dumpSize,
-                const uint32_t sourceId, const OperationStatus& opStatus)
+    void update(uint64_t timeStamp, uint64_t dumpSize, const uint32_t sourceId)
     {
         elapsed(timeStamp);
-        completedTime(timeStamp);
         size(dumpSize);
         sourceDumpId(sourceId);
-        status(opStatus);
+        status(OperationStatus::Completed);
+        completedTime(timeStamp);
     }
 
-    /**
-     * @brief Delete host system dump and it entry dbus object
+    /** @brief Method to get the path to the dump file
+     *
+     *  @return Path to the dump file
      */
-    void delete_() override;
-private:
-
-    void socketPollCallback([[maybe_unused]]sdeventplus::source::IO& es, int fd,
-                            uint32_t revents);
-
-    /** @brief The event source object reference */
-     std::unique_ptr<sdeventplus::source::IO> esource{nullptr};
-
-    std::vector<char> readBuffer;
+    std::filesystem::path getDumpFilePath()
+    {
+        return file;
+    }
 };
 
 } // namespace system
